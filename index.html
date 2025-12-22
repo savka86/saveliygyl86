@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Новогодняя открытка с ИИ</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #f8f1e7, #e6f0ff);
+      color: #2b2b2b;
+    }
+    header {
+      padding: 24px;
+      text-align: center;
+      background: #c62828;
+      color: #fff;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin-top: 8px; font-size: 16px; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      margin-bottom: 24px;
+    }
+    .card h2 { margin-top: 0; }
+
+    .upload {
+      border: 2px dashed #c62828;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .upload input { display: none; }
+    .upload small { display:block; margin-top: 10px; color:#666; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+    .col { flex:1 1 320px; }
+
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      padding: 12px;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .controls { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .controls label { font-size: 14px; color:#444; }
+    .controls input[type="text"]{
+      flex: 1 1 340px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    button {
+      background: #c62828;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 24px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background: #a91f1f; }
+    button:disabled { opacity: 0.6; cursor:not-allowed; }
+
+    .hint { font-size: 13px; color:#666; margin-top: 10px; line-height: 1.35; }
+    .pill {
+      display:inline-block; padding: 6px 10px; border-radius: 999px;
+      background:#f3f3f3; border:1px solid #e6e6e6; color:#444; font-size: 12px;
+    }
+
+    .result { text-align: center; }
+    .result img { max-width: 100%; border-radius: 16px; margin-top: 16px; }
+    .preview {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 16px;
+      border: 1px solid #eee;
+      background:#fafafa;
+      overflow:hidden;
+    }
+    .preview img { width:100%; display:block; }
+    .status { margin-top: 10px; font-size: 14px; }
+    .status.ok { color:#1b5e20; }
+    .status.err { color:#b71c1c; }
+    .status.work { color:#0d47a1; }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 14px;
+      color: #777;
+    }
+
+    /* simple spinner */
+    .spinner {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 3px solid rgba(0,0,0,0.15);
+      border-top-color: rgba(0,0,0,0.55);
+      display:inline-block;
+      animation: spin 0.9s linear infinite;
+      vertical-align: -4px;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎄 Новогодняя открытка с ИИ</h1>
+  <p>Создай советскую новогоднюю открытку с настоящим лицом</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>1. Загрузите фотографию</h2>
+
+    <div class="row">
+      <div class="col">
+        <label class="upload" id="uploadLabel" for="photoInput">
+          Нажмите, чтобы загрузить фото лица
+          <small>Поддержка: JPG/PNG/WebP • до 10 МБ</small>
+          <input id="photoInput" type="file" accept="image/*" />
+        </label>
+        <div class="hint">
+          <span class="pill">Совет</span>
+          Лучше выбрать фото анфас, без очков/масок, с хорошим освещением.
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="preview" id="previewBox" style="display:none;">
+          <img id="previewImg" alt="Предпросмотр фото" />
+        </div>
+        <div class="status" id="fileStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Описание открытки</h2>
+    <textarea id="promptInput">Создай новогоднюю открытку в стиле советских открыток 1950–1980-х годов. Заменить лицо персонажа на лицо с загруженной фотографии, сохранив реальные черты, возраст и тон кожи. Тёплая ностальгическая атмосфера, зимний лес, ёлка, снег, звери. Формат 3:4.</textarea>
+
+    <div class="hint">
+      Можно дописать: «красная шапка, варежки, белка на ветке, мягкое свечение гирлянд» и т.п.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Создать открытку</h2>
+
+    <div class="controls" style="margin-bottom:10px;">
+      <label for="apiUrl">API URL (куда отправлять запрос):</label>
+      <input id="apiUrl" type="text" placeholder="Например: https://your-domain.com/api/generate" />
+    </div>
+
+    <div class="controls">
+      <button id="generateBtn" disabled>✨ Сгенерировать</button>
+      <button id="downloadBtn" disabled title="Станет доступно после генерации">⬇️ Скачать</button>
+      <span class="pill" id="modePill">Режим: ожидание API</span>
+    </div>
+
+    <div class="hint">
+      На GitHub Pages нельзя запустить сервер в этом же репозитории, поэтому нужен внешний API.
+      Если вы ещё не подключили API — вставьте URL вашего бэкенда выше.
+    </div>
+
+    <div class="status" id="genStatus"></div>
+  </div>
+
+  <div class="card result">
+    <h2>Результат</h2>
+    <p id="resultText">Здесь появится готовая открытка</p>
+    <img id="resultImg" style="display:none;" alt="Готовая открытка" />
+  </div>
+</main>
+
+<footer>
+  © 2025 • Новогодние открытки с ИИ
+</footer>
+
+<script>
+(function(){
+  const photoInput = document.getElementById('photoInput');
+  const previewBox = document.getElementById('previewBox');
+  const previewImg = document.getElementById('previewImg');
+  const fileStatus = document.getElementById('fileStatus');
+
+  const promptInput = document.getElementById('promptInput');
+  const apiUrlInput = document.getElementById('apiUrl');
+  const generateBtn = document.getElementById('generateBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const modePill = document.getElementById('modePill');
+
+  const genStatus = document.getElementById('genStatus');
+  const resultImg = document.getElementById('resultImg');
+  const resultText = document.getElementById('resultText');
+
+  let selectedFile = null;
+  let lastResultBlob = null;
+
+  function setStatus(el, msg, cls){
+    el.className = 'status' + (cls ? (' ' + cls) : '');
+    el.innerHTML = msg || '';
+  }
+
+  function updateGenerateEnabled(){
+    const hasFile = !!selectedFile;
+    generateBtn.disabled = !hasFile;
+    if(!hasFile){
+      modePill.textContent = 'Режим: загрузите фото';
+    } else {
+      modePill.textContent = apiUrlInput.value.trim()
+        ? 'Режим: отправка в API'
+        : 'Режим: ожидание API';
+    }
+  }
+
+  function humanFileSize(bytes){
+    const units = ['Б','КБ','МБ','ГБ'];
+    let i = 0;
+    let n = bytes;
+    while(n >= 1024 && i < units.length-1){
+      n /= 1024; i++;
+    }
+    return (i === 0 ? n : n.toFixed(1)) + ' ' + units[i];
+  }
+
+  photoInput.addEventListener('change', () => {
+    const file = photoInput.files && photoInput.files[0];
+    if(!file){
+      selectedFile = null;
+      previewBox.style.display = 'none';
+      setStatus(fileStatus, '', '');
+      updateGenerateEnabled();
+      return;
+    }
+
+    // Basic client-side validation
+    const maxSize = 10 * 1024 * 1024;
+    if(file.size > maxSize){
+      selectedFile = null;
+      photoInput.value = '';
+      previewBox.style.display = 'none';
+      setStatus(fileStatus, 'Файл слишком большой. Максимум 10 МБ.', 'err');
+      updateGenerateEnabled();
+      return;
+    }
+    if(!file.type.startsWith('image/')){
+      selectedFile = null;
+      photoInput.value = '';
+      previewBox.style.display = 'none';
+      setStatus(fileStatus, 'Нужен файл изображения (JPG/PNG/WebP).', 'err');
+      updateGenerateEnabled();
+      return;
+    }
+
+    selectedFile = file;
+    setStatus(fileStatus, 'Выбрано: <b>' + file.name + '</b> (' + humanFileSize(file.size) + ')', 'ok');
+
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewBox.style.display = 'block';
+
+    // reset old result
+    lastResultBlob = null;
+    downloadBtn.disabled = true;
+    resultImg.style.display = 'none';
+    resultText.textContent = 'Здесь появится готовая открытка';
+    setStatus(genStatus, '', '');
+
+    updateGenerateEnabled();
+  });
+
+  apiUrlInput.addEventListener('input', updateGenerateEnabled);
+
+  downloadBtn.addEventListener('click', () => {
+    if(!lastResultBlob) return;
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(lastResultBlob);
+    a.href = url;
+    a.download = 'postcard-3x4.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  });
+
+  async function fetchWithTimeout(url, options, timeoutMs){
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs || 120000);
+    try{
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      return res;
+    } finally {
+      clearTimeout(id);
+    }
+  }
+
+  generateBtn.addEventListener('click', async () => {
+    if(!selectedFile){
+      setStatus(genStatus, 'Сначала загрузите фото.', 'err');
+      return;
+    }
+
+    const apiUrl = apiUrlInput.value.trim();
+    const prompt = promptInput.value.trim();
+
+    if(!prompt){
+      setStatus(genStatus, 'Добавьте описание (промт).', 'err');
+      return;
+    }
+
+    // If API URL is not set, we can't actually generate on GH Pages.
+    if(!apiUrl){
+      setStatus(genStatus,
+        'Сейчас указан пустой API URL. На GitHub Pages генерация не запустится без внешнего сервера.<br>' +
+        'Вставьте URL вашего API (например, /api/generate на вашем домене) и попробуйте снова.',
+        'err'
+      );
+      return;
+    }
+
+    // UI: loading state
+    generateBtn.disabled = true;
+    downloadBtn.disabled = true;
+    resultImg.style.display = 'none';
+    resultText.textContent = 'Генерация...';
+    setStatus(genStatus, '<span class="spinner"></span>Отправляю запрос в API…', 'work');
+
+    try{
+      const form = new FormData();
+      form.append('photo', selectedFile);
+      form.append('prompt', prompt);
+      form.append('format', '3:4');
+
+      // Ожидаемый ответ API:
+      // - либо image/png|image/jpeg (сырое изображение)
+      // - либо JSON { imageUrl: "https://..." } или { imageBase64: "data:image/png;base64,..." }
+      const res = await fetchWithTimeout(apiUrl, { method: 'POST', body: form }, 180000);
+
+      if(!res.ok){
+        const text = await res.text().catch(() => '');
+        throw new Error('HTTP ' + res.status + (text ? (': ' + text.slice(0, 300)) : ''));
+      }
+
+      const contentType = (res.headers.get('content-type') || '').toLowerCase();
+
+      if(contentType.includes('application/json')){
+        const data = await res.json();
+        const url = data.imageUrl || data.url || data.resultUrl;
+        const b64 = data.imageBase64 || data.base64;
+
+        if(url){
+          resultImg.src = url;
+          resultImg.style.display = 'block';
+          resultText.textContent = '';
+          setStatus(genStatus, 'Готово ✅', 'ok');
+
+          // Try to enable download by fetching the image
+          try{
+            const imgRes = await fetchWithTimeout(url, { method:'GET' }, 120000);
+            const blob = await imgRes.blob();
+            lastResultBlob = blob;
+            downloadBtn.disabled = false;
+          } catch(_){}
+          return;
+        }
+
+        if(b64){
+          resultImg.src = b64;
+          resultImg.style.display = 'block';
+          resultText.textContent = '';
+          setStatus(genStatus, 'Готово ✅', 'ok');
+
+          // Convert data URL -> blob for download
+          try{
+            const b = await (await fetch(b64)).blob();
+            lastResultBlob = b;
+            downloadBtn.disabled = false;
+          } catch(_){}
+          return;
+        }
+
+        throw new Error('JSON-ответ не содержит imageUrl или imageBase64.');
+      }
+
+      if(contentType.startsWith('image/')){
+        const blob = await res.blob();
+        lastResultBlob = blob;
+        const url = URL.createObjectURL(blob);
+        resultImg.src = url;
+        resultImg.style.display = 'block';
+        resultText.textContent = '';
+        setStatus(genStatus, 'Готово ✅', 'ok');
+        downloadBtn.disabled = false;
+        return;
+      }
+
+      // Fallback: try to interpret as text with URL
+      const text = await res.text();
+      if(text && text.startsWith('http')){
+        resultImg.src = text.trim();
+        resultImg.style.display = 'block';
+        resultText.textContent = '';
+        setStatus(genStatus, 'Готово ✅', 'ok');
+        return;
+      }
+
+      throw new Error('Непонятный формат ответа API. content-type=' + contentType);
+
+    } catch(err){
+      const msg = (err && err.name === 'AbortError')
+        ? 'Таймаут запроса. Сервер не ответил вовремя.'
+        : (err && err.message ? err.message : String(err));
+      setStatus(genStatus, 'Ошибка: ' + msg, 'err');
+      resultText.textContent = 'Не удалось сгенерировать открытку.';
+    } finally {
+      generateBtn.disabled = !selectedFile;
+    }
+  });
+
+  updateGenerateEnabled();
+})();
+</script>
+
+</body>
+</html>
